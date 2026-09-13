@@ -107,6 +107,20 @@ aside h2 span { text-transform: none; letter-spacing: 0; color: #ffffff55; font-
 .evt .ctx  { grid-area: ctx;  color: #ffffff55; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .evt .pl   { grid-area: pl;   color: #ffffff88; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.export { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.export button {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: #ffffff0a;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.export button:hover { background: #ffffff18; }
+.export button.quiet { border-color: #ffffff22; color: #ffffff88; margin-left: auto; }
+
 .note { font-size: 11px; color: #ffffff55; line-height: 1.6; }
 
 @media (max-width: 900px) {

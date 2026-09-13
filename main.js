@@ -11,7 +11,7 @@
 // shape of those rows is a design decision you are making right now, whether or
 // not you think of it that way.
 
-import { Telemetry } from "./telemetry.js";
+import { Telemetry, eventsToCsv } from "./telemetry.js";
 import { THEMES, THEME_IDS, DEFAULT_THEME, theme } from "./themes.js";
 import { makeRng } from "./engine.js";
 import { Blackjack } from "./blackjack.js";
@@ -21,7 +21,13 @@ const params = new URLSearchParams(location.search);
 const seedParam = params.get("seed");
 const rng = makeRng(seedParam === null ? null : Number(seedParam));
 
-const tm = new Telemetry({ batchSize: Number(params.get("batch") ?? 20) });
+// The collector serves this page in the course repo. On a static host there is
+// nothing listening at /collect, so events are only kept in localStorage there.
+const hasCollector = location.protocol.startsWith("http") && !location.hostname.endsWith("github.io");
+const tm = new Telemetry({
+  batchSize: Number(params.get("batch") ?? 20),
+  endpoint: hasCollector ? "/collect" : null,
+});
 const canvas = document.getElementById("stage");
 const feedEl = document.getElementById("feed");
 const themeBar = document.getElementById("themes");
@@ -47,7 +53,45 @@ tm.onEmit((evt) => {
     `<span class="pl">${summarise(evt.payload)}</span>`;
   feedEl.prepend(row);
   while (feedEl.childElementCount > FEED_MAX) feedEl.lastElementChild.remove();
-  statusEl.textContent = `${evt.seq + 1} events · ${tm.sent} sent · ${tm.dropped} dropped`;
+  updateStatus();
+});
+
+function updateStatus() {
+  const bits = [`${tm.seq} events`, `${tm.storedCount} saved locally`];
+  if (tm.endpoint) bits.push(`${tm.sent} sent`, `${tm.dropped} dropped`);
+  if (tm.trimmed) bits.push(`${tm.trimmed} evicted`);
+  statusEl.textContent = bits.join(" · ");
+}
+
+// ─── Local export ─────────────────────────────────────────────────────────────
+function download(filename, type, text) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportEvents(format) {
+  tm.flush(); // include whatever is still queued
+  updateStatus();
+  const events = tm.stored();
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  if (format === "csv") {
+    download(`neondeck-events-${stamp}.csv`, "text/csv", eventsToCsv(events));
+  } else {
+    download(`neondeck-events-${stamp}.jsonl`, "application/x-ndjson",
+      events.map((e) => JSON.stringify(e)).join("\n") + "\n");
+  }
+}
+
+document.getElementById("export-csv").addEventListener("click", () => exportEvents("csv"));
+document.getElementById("export-jsonl").addEventListener("click", () => exportEvents("jsonl"));
+document.getElementById("clear-events").addEventListener("click", () => {
+  tm.clearStored();
+  feedEl.replaceChildren();
+  updateStatus();
 });
 
 function summarise(payload) {

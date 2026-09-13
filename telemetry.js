@@ -20,7 +20,13 @@
 //                state of affairs and not an error condition.
 
 const STORAGE_KEY = "neondeck.player_id";
+const EVENTS_KEY = "neondeck.events";
 const ENDPOINT = "/collect";
+
+// Without a collector (GitHub Pages, file://) the browser is the only event log
+// there is. It is a bounded one: localStorage gives us a few MB, so the oldest
+// events are evicted first and `trimmed` says how many are gone.
+const LOCAL_MAX = 5000;
 
 function uuid() {
   // crypto.randomUUID is unavailable on file:// in some browsers; fall back so the
@@ -63,6 +69,8 @@ export class Telemetry {
     this.context = {};          // merged into every event; games set table_id etc.
     this.dropped = 0;           // batches the collector refused or that failed
     this.sent = 0;
+    this.trimmed = 0;           // oldest local events evicted to stay under quota
+    this.storedCount = this.stored().length;
     this.listeners = [];
 
     this.timer = setInterval(() => this.flush(), flushMs);
@@ -117,6 +125,8 @@ export class Telemetry {
       events: this.queue,
     };
     this.queue = [];
+    this.store(batch);
+    if (!this.endpoint) return;
     const body = JSON.stringify(batch);
 
     if (beacon && navigator.sendBeacon) {
@@ -142,4 +152,62 @@ export class Telemetry {
         this.dropped += batch.count;
       });
   }
+
+  // Keeps batch_id and sent_at on each row, so a local export has the same
+  // columns the collector would have written, minus received_at.
+  store(batch) {
+    const rows = batch.events.map((e) => ({ ...e, batch_id: batch.batch_id, sent_at: batch.sent_at }));
+    let all = this.stored().concat(rows);
+    if (all.length > LOCAL_MAX) {
+      this.trimmed += all.length - LOCAL_MAX;
+      all = all.slice(-LOCAL_MAX);
+    }
+    while (all.length) {
+      try {
+        localStorage.setItem(EVENTS_KEY, JSON.stringify(all));
+        this.storedCount = all.length;
+        return;
+      } catch (err) {
+        if (err?.name !== "QuotaExceededError") return; // storage unavailable
+        const drop = Math.ceil(all.length / 2);
+        this.trimmed += drop;
+        all = all.slice(drop);
+      }
+    }
+  }
+
+  stored() {
+    try {
+      return JSON.parse(localStorage.getItem(EVENTS_KEY) ?? "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  clearStored() {
+    this.queue = [];
+    this.trimmed = 0;
+    this.storedCount = 0;
+    try {
+      localStorage.removeItem(EVENTS_KEY);
+    } catch {}
+  }
+}
+
+// One row per event. Context keys are few and stable, so they become their own
+// columns; payloads differ per event_name, so each stays a single JSON cell
+// rather than exploding into hundreds of mostly-empty columns.
+export function eventsToCsv(events) {
+  const base = ["event_id", "event_name", "event_version", "occurred_at", "sent_at",
+    "session_id", "player_id", "seq", "batch_id"];
+  const ctxKeys = [...new Set(events.flatMap((e) => Object.keys(e.context ?? {})))].sort();
+  const header = [...base, ...ctxKeys.map((k) => `context.${k}`), "payload"];
+  const cell = (v) => {
+    if (v === null || v === undefined) return "";
+    const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = events.map((e) =>
+    [...base.map((k) => e[k]), ...ctxKeys.map((k) => e.context?.[k]), e.payload].map(cell).join(","));
+  return [header.join(","), ...lines].join("\r\n");
 }
