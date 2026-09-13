@@ -1,0 +1,115 @@
+/* Neon Deck chrome. The canvas draws itself in the selected theme; this file only
+   styles the frame around it, and takes its accent from the theme via CSS vars. */
+
+:root { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+
+body {
+  --accent: #ff2d95;
+  --felt: #1a0a2e;
+  --text: #f4e9ff;
+  margin: 0;
+  background: #08070d;
+  color: var(--text);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #ffffff14;
+  background: #0c0b14;
+}
+
+h1 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.themes { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+
+.theme-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 7px;
+  border-radius: 999px;
+  border: 1px solid #ffffff22;
+  background: #ffffff0a;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.theme-chip:hover { background: #ffffff14; }
+.theme-chip.on { border-color: var(--accent); background: #ffffff18; }
+.swatch {
+  width: 14px; height: 14px; border-radius: 4px;
+  background: var(--felt);
+  border: 2px solid var(--accent);
+}
+
+.status { font-variant-numeric: tabular-nums; font-size: 12px; color: #ffffff77; }
+
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  padding: 16px 20px 24px;
+  align-items: start;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 14px;
+  border: 1px solid #ffffff1a;
+  cursor: pointer;
+}
+
+aside h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #ffffff99;
+}
+aside h2 span { text-transform: none; letter-spacing: 0; color: #ffffff55; font-weight: 400; }
+
+.feed {
+  height: 470px;
+  overflow-y: auto;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #0b0a11;
+  padding: 6px;
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.evt {
+  display: grid;
+  grid-template-columns: 34px 118px 1fr;
+  grid-template-areas: "seq name ctx" ". pl pl";
+  gap: 0 6px;
+  padding: 3px 4px;
+  border-bottom: 1px solid #ffffff0a;
+}
+.evt .seq  { grid-area: seq;  color: #ffffff44; }
+.evt .name { grid-area: name; color: var(--accent); }
+.evt .ctx  { grid-area: ctx;  color: #ffffff55; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evt .pl   { grid-area: pl;   color: #ffffff88; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.note { font-size: 11px; color: #ffffff55; line-height: 1.6; }
+
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; }
+  .feed { height: 240px; }
+}

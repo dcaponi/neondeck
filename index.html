@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Deck</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <h1>Neon&nbsp;Deck</h1>
+    <div id="themes" class="themes"></div>
+    <div id="status" class="status">0 events</div>
+  </header>
+
+  <main>
+    <canvas id="stage" width="900" height="620"></canvas>
+    <aside>
+      <h2>Event log <span>what the app is telling you</span></h2>
+      <div id="feed" class="feed"></div>
+      <p class="note">
+        Every row is one immutable fact, emitted at the moment it was true. The grain of
+        these rows is argued out in <code>01_instrumenting_the_app</code>; the fabric,
+        semantic layer, ontology and context layer are built on top of them.
+      </p>
+    </aside>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
